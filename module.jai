@@ -321,7 +321,7 @@ window :: (title: string, rect: Rect, $code: Code) #expand {
     }
 }
 
-layout :: (widths: []s32, height: int, $code: Code) #expand {
+column :: (widths: []s32, height: int, $code: Code) #expand {
     layout_begin_column();
     layout_row(widths, height);
     #insert code;
