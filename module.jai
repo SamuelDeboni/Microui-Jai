@@ -321,7 +321,7 @@ window :: (title: string, rect: Rect, $code: Code) #expand {
     }
 }
 
-layout :: (widths: []int, height: int, $code: Code) #expand {
+layout :: (widths: []s32, height: int, $code: Code) #expand {
     layout_begin_column();
     layout_row(widths, height);
     #insert code;
@@ -717,7 +717,7 @@ layout_end_column :: () {
 	a.max.y = max(a.max.y, b.max.y);
 }
 
-layout_row :: (widths: []int, height: int) {
+layout_row :: (widths: []s32, height: int) {
     using context.mu_ctx;
 
 	layout := get_layout();
@@ -744,8 +744,7 @@ layout_row_items :: (items: s32, height: s32 = 0) {
 
 layout_width :: (width: int) {
     using context.mu_ctx;
-
-	get_layout().size.x = width;
+	get_layout().size.x = cast(s32)width;
 }
 
 
@@ -1221,7 +1220,7 @@ header :: (label: string, istreenode: bool = false, opt: Opt = 0) -> Res {
 
 	id := get_id(label.data, label.count);
 	idx := pool_get(context.mu_ctx.treenode_pool.data, MU_TREENODEPOOL_SIZE, id);
-	width: int = -1;
+	width: s32 = -1;
 	layout_row(.[width], 0);
 
 	active := (idx >= 0);
@@ -1286,15 +1285,16 @@ scrollbar :: (cnt: *Container, b: *Rect, cs: Vec2,
 
 	/* only add scrollbar if content size is larger than body */
 	maxscroll := #insert #run sprint("cs.% - b.%;", y, h);
-
-	if maxscroll > 0 && b.h > 0 {
+    
+    b_h := #insert #run sprint("b.%;", h);
+	if maxscroll > 0 && b_h > 0 {
 		base, thumb: Rect;
-		id := get_id("!scrollbar".data, 11);
+        #insert #run sprint("id := get_id(\"!scrollbar%\".data, 11);", y);
 
 		/* get sizing / positioning */
 		base = b.*;
-		base.x = #insert #run sprint("b.% + b.%;", x, w);
-		base.w = context.mu_ctx.style.scrollbar_size;
+		#insert #run sprint("base.% = b.% + b.%;", x, x, w);
+		#insert #run sprint("base.% = context.mu_ctx.style.scrollbar_size;", w);
 
 		/* handle input */
 		update_control(id, base, 0);
@@ -1531,7 +1531,7 @@ compare_zindex(const void *a, const void *b) -> s32{
 
 push_layout :: (body: Rect, scroll: Vec2) {
 	layout: Layout;
-	width := 0;
+	width : s32 = 0;
 
 	layout.body = Rect.{body.x - scroll.x, body.y - scroll.y, body.w, body.h};
 	layout.max = Vec2.{-0x1000000, -0x1000000};
