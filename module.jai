@@ -1152,6 +1152,36 @@ slider :: (value: *float64, low: float64, high: float64, step: float64, fmt: For
 	return res;
 }
 
+number :: (value: *float32, step: float32, fmt: FormatFloat = .{}, opt: Opt = 0) -> Res {
+    push_id(*value, size_of(**float32));
+    defer pop_id();
+
+    v64 := cast(float64)value.*;
+    res := number(*v64, cast(float64)step, fmt, opt);
+    value.* = cast(float32)v64;
+    return res;
+}
+
+number :: (value: *int, step: int, fmt: FormatFloat = .{}, opt: Opt = 0) -> Res {
+    push_id(*value, size_of(**int));
+    defer pop_id();
+
+    v64 := cast(float64)value.*;
+    res := number(*v64, cast(float64)step, fmt, opt);
+    value.* = cast(itn)v64;
+    return res;
+}
+
+number :: (value: *s32, step: s32, fmt: FormatFloat = .{}, opt: Opt = 0) -> Res {
+    push_id(*value, size_of(**s32));
+    defer pop_id();
+
+    v64 := cast(float64)value.*;
+    res := number(*v64, cast(float64)step, fmt, opt);
+    value.* = cast(s32)v64;
+    return res;
+}
+
 number :: (value: *float64, step: float64, fmt: FormatFloat = .{}, opt: Opt = 0) -> Res {
     using context.mu_ctx;
 
