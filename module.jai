@@ -1103,6 +1103,12 @@ textbox :: (buf: []u8, text_len: *int, opt: Opt = .HOLDFOCUS) -> Res, string {
 	return res, str;
 }
 
+slider :: (value: *float32, low: float32, high: float32, step: float32, fmt: FormatFloat = .{}, opt: Opt = 0) -> Res {
+    v64 := cast(float64)value.*;
+    res := slider(*v64, low, high, step, fmt, opt);
+    value.* = cast(float32)v64;
+    return res;
+}
 
 slider :: (value: *float64, low: float64, high: float64, step: float64, fmt: FormatFloat = .{}, opt: Opt = 0) -> Res {
     using context.mu_ctx;
@@ -1124,7 +1130,7 @@ slider :: (value: *float64, low: float64, high: float64, step: float64, fmt: For
 	/* handle input */
 	if focus == id && (mouse_down | mouse_pressed) == Mouse.LEFT {
 		v = low + (mouse_pos.x - base.x) * (high - low) / base.w;
-		if step v = (((v + step / 2) / step)) * step;
+		if step v = cast(s32)(((v + step / 2) / step)) * step;
 	}
 
 	/* clamp and store value, update res */
