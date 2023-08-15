@@ -384,7 +384,7 @@ end :: () {
 	n = root_list.idx;
 	{
 		view := array_view(root_list.items, 0, root_list.idx);
-		view = quick_sort(view, (a, b) => a.zindex - b.zindex);
+		view = quick_sort(view, (a, b) => b.zindex - a.zindex);
 	}
 
 	// TODO: Sort by zindex
@@ -1187,6 +1187,16 @@ number :: (value: *s32, step: s32, fmt: FormatFloat = .{}, opt: Opt = 0) -> Res 
     return res;
 }
 
+number :: (value: *u16, step: u16, fmt: FormatFloat = .{}, opt: Opt = 0) -> Res {
+    push_id(*value, size_of(**u16));
+    defer pop_id();
+
+    v64 := cast(float64)value.*;
+    res := number(*v64, cast(float64)step, fmt, opt);
+    value.* = cast(u16)v64;
+    return res;
+}
+
 number :: (value: *float64, step: float64, fmt: FormatFloat = .{}, opt: Opt = 0) -> Res {
     using context.mu_ctx;
 
@@ -1262,7 +1272,7 @@ header :: (label: string, istreenode: bool = false, opt: Opt = 0) -> Res {
 
 
 header :: (label: string, opt: Opt) -> Res {
-	return header(label, 0, opt);
+	return header(label, false, opt);
 }
 
 begin_treenode :: (label: string, opt: Opt = 0) -> Res {
@@ -1419,18 +1429,19 @@ open_popup :: (name: string) {
 	cnt: *Container = get_container(name);
 
 	/* set as hover root so popup isn't closed in begin_window_ex()  */
-	context.mu_ctx.hover_root = context.mu_ctx.next_hover_root = cnt;
+    context.mu_ctx.next_hover_root = cnt;
+    context.mu_ctx.hover_root = cnt; 
 
 	/* position at mouse cursor, open and bring-to-front */
-	cnt.rect = Rect.{context.mu_ctx.mouse_pos.x, context.mu_ctx.mouse_pos.y, 1, 1};
+	cnt.rect = Rect.{context.mu_ctx.mouse_pos.x, context.mu_ctx.mouse_pos.y, 2, 1};
 	cnt.open = 1;
 	bring_to_front(cnt);
 }
 
 
-begin_popup :: (name: string) -> int {
-	opt: Opt = Opt.POPUP | Opt.AUTOSIZE | Opt.NORESIZE | Opt.NOSCROLL | Opt.NOTITLE | Opt.CLOSED;
-	return begin_window_ex(name, Rect.{0, 0, 0, 0}, opt);
+begin_popup :: (name: string) -> Res {
+	opt: Opt = .POPUP | .AUTOSIZE | .NORESIZE | .NOSCROLL | .NOTITLE | .CLOSED;
+	return begin_window(name, Rect.{0, 0, 0, 0}, opt);
 }
 
 end_popup :: () {
