@@ -27,7 +27,7 @@
 
 MU_VERSION :: "2.01";
 
-MU_COMMANDLIST_SIZE    :: 1024;
+MU_COMMANDLIST_SIZE    :: 4*1024;
 MU_ROOTLIST_SIZE       :: 32;
 MU_CONTAINERSTACK_SIZE :: 32;
 MU_CLIPSTACK_SIZE      :: 32;
@@ -158,6 +158,7 @@ Rect_Command :: struct {
 	base:  Base_Command;
 	rect:  Rect;
 	color: Color;
+    radius: float;
 }
 
 Text_Command :: struct {
@@ -328,6 +329,7 @@ column :: (widths: []s32, height: int, $code: Code) #expand {
     layout_end_column();
 }
 
+
 //slider :: inline (value, lo, hi) => slider(value, lo, hi, 0, MU_SLIDER_FMT, Opt.ALIGNCENTER);
 //number :: inline (value, step) => number(value, step, MU_SLIDER_FMT, Opt.ALIGNCENTER);
 
@@ -438,7 +440,7 @@ draw_box :: (rect: Rect, color: Color) {
 	draw_rect(Rect.{rect.x + rect.w - 1, rect.y, 1, rect.h}, color);
 }
 
-draw_rect :: (rect: Rect, color: Color) {
+draw_rect :: (rect: Rect, color: Color, radius: float = 0.0) {
     using context.mu_ctx;
 
 	_rect := intersect_rects(rect, get_clip_rect());
@@ -447,6 +449,7 @@ draw_rect :: (rect: Rect, color: Color) {
 		cmd := push_command(.RECT);
 		cmd.rect.rect = _rect;
 		cmd.rect.color = color;
+        cmd.rect.radius = radius;
 	}
 }
 
@@ -663,7 +666,7 @@ draw_text :: (font: Font, str: string, pos: Vec2, color: Color)
 	len := str.count;
 	cmd := push_command(.TEXT);
 
-	cmd.text.str = copy_string(str, temporary_allocator);
+	cmd.text.str = copy_string(str,, temporary_allocator);
 	cmd.text.pos = pos;
 	cmd.text.color = color;
 	cmd.text.font = font;
@@ -971,12 +974,39 @@ button :: (label: string, icon: Icon = 0, opt: Opt = .ALIGNCENTER) -> Res {
 	return res;
 }
 
+checkbox :: (label: string, state: bool) -> Res {
+    using context.mu_ctx;
+
+	res: Res;
+    id: Id = get_id(label.data, label.count);
+
+	r   := layout_next();
+	box := Rect.{r.x, r.y, r.h, r.h};
+
+	update_control(id, r, 0);
+
+	/* handle click */
+	if context.mu_ctx.mouse_pressed == .LEFT && context.mu_ctx.focus == id {
+		res |= .CHANGE;
+		//state.* = !state.*;
+	}
+
+	/* draw */
+	draw_control_frame(id, box, .BASE, 0);
+	if state {
+		draw_icon(.CHECK, box, context.mu_ctx.style.colors[Color_Type.TEXT]);
+	}
+
+	r = Rect.{r.x + box.w, r.y, r.w - box.w, r.h};
+	draw_control_text(label, r, .TEXT, 0);
+	return res;
+}
 
 checkbox :: (label: string, state: *bool) -> Res {
     using context.mu_ctx;
 
 	res: Res;
-	id: Id = get_id(*state, size_of(state));
+	id: Id = get_id(*state, size_of(*bool));
 
 	r   := layout_next();
 	box := Rect.{r.x, r.y, r.h, r.h};
@@ -1531,13 +1561,16 @@ rect_overlaps_vec2 :: inline (r: Rect, p: Vec2) -> bool {
 _draw_frame :: (rect: Rect, colorid: Color_Type) {
     using context.mu_ctx;
 
-	draw_rect(rect, context.mu_ctx.style.colors[colorid]);
-	if colorid == .SCROLLBASE  || colorid == .SCROLLTHUMB || colorid == .TITLEBG  return;
+    rounded := true;
+    if colorid == .TITLEBG || colorid == .WINDOWBG rounded = false;
 
 	/* draw border */
 	if style.colors[Color_Type.BORDER].a {
-		draw_box(expand_rect(rect, 1), style.colors[Color_Type.BORDER]);
+		draw_rect(expand_rect(rect, 1), style.colors[Color_Type.BORDER], 5);
 	}
+
+	draw_rect(rect, context.mu_ctx.style.colors[colorid], 5);
+	if colorid == .SCROLLBASE  || colorid == .SCROLLTHUMB || colorid == .TITLEBG  return;
 }
 
 /*
