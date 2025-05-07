@@ -760,7 +760,7 @@ layout_width :: (width: int) {
 layout_height :: (height: int) {
     using context.mu_ctx;
 
-	get_layout().size.y = height;
+	get_layout().size.y = height.(s32);
 }
 
 
@@ -769,7 +769,7 @@ layout_set_next :: (r: Rect, relative: int) {
 
 	layout := get_layout();
 	layout.next = r;
-	layout.next_type = ifx relative then RELATIVE else ABSOLUTE;
+	layout.next_type = cast(s32, ifx relative then RELATIVE else ABSOLUTE);
 }
 
 layout_next :: () -> Rect {
@@ -908,13 +908,13 @@ text :: (text: string) {
 	start, end: *u8;
 	p := text.data;
 
-	width: int = -1;
+	width: s32 = -1;
 
 	font  := context.mu_ctx.style.font;
 	color := context.mu_ctx.style.colors[Color_Type.TEXT];
 
 	layout_begin_column();
-	layout_row(1, *width, context.mu_ctx.text_height(font));
+	layout_row(.[width], context.mu_ctx.text_height(font));
 
 	while true {
 		r := layout_next();
@@ -927,18 +927,19 @@ text :: (text: string) {
 
 			while (p.* && p.* != #char " " && p.* != #char "\n") p += 1;
 
-			w += context.mu_ctx.text_width(font, string.{word, p - word});
+			w += context.mu_ctx.text_width(font, string.{p - word, word});
 
 			if w > r.w && end != start break;
 
-			w += context.mu_ctx.text_width(font, string.{p, 1});
+			w += context.mu_ctx.text_width(font, string.{1, p});
 
-			end = p += 1;
+			end = p;
+			p += 1;
 
 			if !(end.* && end.* != #char "\n") break;
 		}
 
-		draw_text(font, start, end - start, Vec2.{r.x, r.y}, color);
+		draw_text(font, string.{end - start, start}, Vec2.{r.x, r.y}, color);
 		p = end + 1;
 
 		if !end break;
