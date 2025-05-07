@@ -386,11 +386,8 @@ end :: () {
 	n = root_list.idx;
 	{
 		view := array_view(root_list.items, 0, root_list.idx);
-		view = quick_sort(view, (a, b) => b.zindex - a.zindex);
+		view = quick_sort(view, (a, b) => a.zindex - b.zindex);
 	}
-
-	// TODO: Sort by zindex
-	//qsort(root_list.items, n, size_of(Container*), compare_zindex);
 
 	/* set root container jump commands */
 	i = 0;
@@ -427,7 +424,7 @@ get_id :: (data: *void, size: int) -> Id {
     using context.mu_ctx;
 
 	idx := id_stack.idx;
-	res := ifx idx > 0  id_stack.items[idx - 1]  HASH_INITIAL;
+	res := ifx idx > 0 then id_stack.items[idx - 1] else HASH_INITIAL;
 	hash(*res, data, size);
 	last_id = res;
 	return res;
@@ -458,6 +455,15 @@ get_clip_rect :: () -> Rect {
 
 	assert(clip_stack.idx > 0);
 	return clip_stack.items[clip_stack.idx - 1];
+}
+
+push_id :: (data: $T) {
+	push_id(*data, size_of(T));
+}
+
+push_id_scope :: (data: $T) #expand {
+	push_id(data);
+	`defer pop_id();
 }
 
 push_id :: (data: *void, size: int) {
@@ -509,15 +515,15 @@ get_current_container :: () -> *Container{
 	return container_stack.items[ container_stack.idx - 1 ];
 }
 
-get_container :: (name: string) -> *Container{
+get_container :: (name: string, opt: Opt = 0) -> *Container {
 	id := get_id(name.data, name.count);
-	return get_container(id, 0);
+	return get_container(id, opt);
 }
 
 bring_to_front :: (cnt: *Container) {
     using context.mu_ctx;
 
-	last_zindex -= 1;
+	last_zindex += 1;
 	cnt.zindex = last_zindex;
 }
 
@@ -1187,7 +1193,7 @@ slider :: (value: *float64, low: float64, high: float64, step: float64, fmt: For
 	return res;
 }
 
-number :: (value: *float32, step: float32, fmt: FormatFloat = .{}, opt: Opt = 0) -> Res {
+number :: (value: *float32, step: float32 = 0.1, fmt: FormatFloat = .{}, opt: Opt = 0) -> Res {
     push_id(*value, size_of(**float32));
     defer pop_id();
 
@@ -1197,17 +1203,27 @@ number :: (value: *float32, step: float32, fmt: FormatFloat = .{}, opt: Opt = 0)
     return res;
 }
 
-number :: (value: *int, step: int, fmt: FormatFloat = .{}, opt: Opt = 0) -> Res {
+number :: (value: *int, step: int = 1, fmt: FormatFloat = .{}, opt: Opt = 0) -> Res {
     push_id(*value, size_of(**int));
     defer pop_id();
 
     v64 := cast(float64)value.*;
     res := number(*v64, cast(float64)step, fmt, opt);
-    value.* = cast(itn)v64;
+    value.* = cast(int)v64;
     return res;
 }
 
-number :: (value: *s32, step: s32, fmt: FormatFloat = .{}, opt: Opt = 0) -> Res {
+number :: (value: *u64, step: int = 1, fmt: FormatFloat = .{}, opt: Opt = 0) -> Res {
+    push_id(value);
+    defer pop_id();
+
+    v64 := cast(float64)value.*;
+    res := number(*v64, cast(float64)step, fmt, opt);
+    value.* = cast(u64)v64;
+    return res;
+}
+
+number :: (value: *s32, step: s32 = 1, fmt: FormatFloat = .{}, opt: Opt = 0) -> Res {
     push_id(*value, size_of(**s32));
     defer pop_id();
 
@@ -1217,8 +1233,18 @@ number :: (value: *s32, step: s32, fmt: FormatFloat = .{}, opt: Opt = 0) -> Res 
     return res;
 }
 
-number :: (value: *u16, step: u16, fmt: FormatFloat = .{}, opt: Opt = 0) -> Res {
-    push_id(*value, size_of(**u16));
+number :: (value: *u32, step: int = 1, fmt: FormatFloat = .{}, opt: Opt = 0) -> Res {
+    push_id(value);
+    defer pop_id();
+
+    v64 := cast(float64)value.*;
+    res := number(*v64, cast(float64)step, fmt, opt);
+    value.* = cast(u32)v64;
+    return res;
+}
+
+number :: (value: *u16, step: u16 = 1, fmt: FormatFloat = .{}, opt: Opt = 0) -> Res {
+    push_id(value);
     defer pop_id();
 
     v64 := cast(float64)value.*;
@@ -1227,7 +1253,39 @@ number :: (value: *u16, step: u16, fmt: FormatFloat = .{}, opt: Opt = 0) -> Res 
     return res;
 }
 
-number :: (value: *float64, step: float64, fmt: FormatFloat = .{}, opt: Opt = 0) -> Res {
+number :: (value: *s16, step: s16 = 1, fmt: FormatFloat = .{}, opt: Opt = 0) -> Res {
+    push_id(value);
+    defer pop_id();
+
+    v64 := cast(float64)value.*;
+    res := number(*v64, cast(float64)step, fmt, opt);
+    value.* = cast(s16)v64;
+    return res;
+}
+
+number :: (value: *u8, step: u8 = 1, fmt: FormatFloat = .{}, opt: Opt = 0) -> Res {
+    push_id(value);
+    defer pop_id();
+
+    v64 := cast(float64)value.*;
+    res := number(*v64, cast(float64)step, fmt, opt);
+	Clamp(*v64, 0, 255.0);
+    value.* = cast,no_check(u8)v64;
+    return res;
+}
+
+number :: (value: *s8, step: s8 = 1, fmt: FormatFloat = .{}, opt: Opt = 0) -> Res {
+    push_id(value);
+    defer pop_id();
+
+    v64 := cast(float64)value.*;
+    res := number(*v64, cast(float64)step, fmt, opt);
+	Clamp(*v64, -128.0, 127.0);
+    value.* = cast,no_check(s8)v64;
+    return res;
+}
+
+number :: (value: *float64, step: float64 = 0.1, fmt: FormatFloat = .{}, opt: Opt = 0) -> Res {
     using context.mu_ctx;
 
 	res: Res;
@@ -1456,7 +1514,7 @@ end_window :: () {
 open_popup :: (name: string) {
     using context.mu_ctx;
 
-	cnt: *Container = get_container(name);
+	cnt := get_container(name);
 
 	/* set as hover root so popup isn't closed in begin_window_ex()  */
     context.mu_ctx.next_hover_root = cnt;
@@ -1478,6 +1536,82 @@ end_popup :: () {
 	end_window();
 }
 
+enum_dropdown :: (label: string, value: *$T) -> bool #modify {
+	if T.(*Type_Info).type != .ENUM  return false, "value must be an enum";
+	return true;
+} {
+	push_id(*label.data, size_of(type_of(label.data)));
+	defer pop_id();
+
+	is_mouse_over := false;
+
+	info := type_info(T);
+	dropdown(tprint("%: %", label, value.*), opt = 0, code = #code {
+		win := get_current_container();
+		is_mouse_over = mouse_over(win.rect);
+
+		for info.names {
+			push_id(*it_index, size_of(int));
+			defer pop_id();
+			if button(it) {
+				win.open = 0;
+				value.* = xx info.values[it_index];
+			}
+		}
+	});
+
+	return is_mouse_over;
+}
+
+dropdown :: (label: string, icon: Icon = 0, opt: Opt = .ALIGNCENTER, $code: Code) #expand {
+    using context.mu_ctx;
+
+	id: Id = get_id(label.data, label.count);
+
+	r: Rect = layout_next();
+	update_control(id, r, opt);
+
+	dropdown_label := tprint("%_popup", label);
+	w_opt: Opt = .POPUP | .NORESIZE | .NOTITLE | .CLOSED;
+
+	/* handle click */
+	if mouse_pressed == .LEFT && focus == id {
+		id := get_id(dropdown_label.data, dropdown_label.count);
+		cnt := get_container(id, w_opt);
+		if cnt && cnt.open {
+			cnt.open = 0;
+		} else {
+			open_popup(dropdown_label);
+		}
+	}
+
+	/* draw */
+	draw_control_frame(id, r, .BUTTON, opt);
+
+	ir := r;
+	ir.w = r.h;
+	ir.x = r.x + r.w - r.h;
+	draw_icon(.COLLAPSED, ir, style.colors[Color_Type.TEXT]);
+
+	lr := r;
+	lr.w -= r.h;
+	if label  draw_control_text(label, r, .TEXT, opt);
+	if icon   draw_icon(icon, lr, style.colors[Color_Type.TEXT]);
+
+	if begin_window(dropdown_label, Rect.{r.x, r.y+r.h, r.w, 200}, w_opt) {
+		cnt := get_current_container();
+		cnt.rect.x = r.x;
+		cnt.rect.y = r.y + r.h;
+		cnt.rect.w = r.w;
+		cnt.rect.h = 200;
+    	layout_row(.[r.w - 25], 0);
+
+		#insert code;
+
+		end_window();
+	}
+}
+
 begin_panel :: (name: string, opt: Opt = 0) {
     using context.mu_ctx;
 
@@ -1489,7 +1623,7 @@ begin_panel :: (name: string, opt: Opt = 0) {
 		context.mu_ctx.draw_frame(cnt.rect, .PANELBG);
 	}
 
-	push(context.mu_ctx.container_stack, cnt);
+	push(*context.mu_ctx.container_stack, cnt);
 	push_container_body(cnt, cnt.rect, opt);
 	push_clip_rect(cnt.body);
 }
@@ -1615,13 +1749,13 @@ get_container :: (id: Id, opt: Opt) -> *Container {
 
 	idx := pool_get(context.mu_ctx.container_pool.data, MU_CONTAINERPOOL_SIZE, id);
 	if idx >= 0 {
-		if context.mu_ctx.containers[idx].open || (~opt & Opt.CLOSED) {
+		if context.mu_ctx.containers[idx].open || (~opt & .CLOSED) {
 			pool_update(context.mu_ctx.container_pool.data, idx);
 		}
 		return *context.mu_ctx.containers[idx];
 	}
 
-	if opt & Opt.CLOSED { return null; }
+	if opt & .CLOSED { return null; }
 
 	/* container not found in pool: init new container */
 	idx = pool_init(context.mu_ctx.container_pool.data, MU_CONTAINERPOOL_SIZE, id);
@@ -1737,3 +1871,4 @@ hash :: (hash: *Id, data: *void, size: int) {
 
 #import "Basic";
 #import "Sort";
+#import "Math";

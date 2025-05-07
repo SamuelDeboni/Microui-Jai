@@ -22,7 +22,7 @@ test_window :: () {
         if Mu.header("Window Info", true) {
             win := Mu.get_current_container();
             
-            Mu.column(.[85, -1], 0, #code {
+            Mu.layout(.[85, -1], 0, #code {
                 Mu.label("Position:");
                 Mu.labelf("%d, %d", win.rect.x, win.rect.y);
 

@@ -217,6 +217,7 @@ number_box_value: float64;
 slider_value: float64;
 
 test_window :: () {
+
     if Mu.begin_window("Demo Window", Mu.Rect.{40, 40, 300, 450}) {
         defer Mu.end_window();
 
@@ -256,6 +257,28 @@ test_window :: () {
 
                 Mu.label("depth 2");
             });
+        });
+
+        Mu.layout_row(.[-1], 0);
+        if Mu.button("open popup") {
+            Mu.open_popup("test");
+        }
+
+        if Mu.begin_popup("test") {
+            Mu.button("1");
+            Mu.button("2");
+            Mu.button("3");
+            Mu.button("4");
+
+            Mu.end_popup();
+        }
+
+        Mu.dropdown("test2", code = #code {
+            cnt := Mu.get_current_container();
+            if Mu.button("Test a") cnt.open = 0;
+            if Mu.button("Test b") cnt.open = 0;
+            if Mu.button("Test c") cnt.open = 0;
+            if Mu.button("Test d") cnt.open = 0;
         });
     }
 }
